@@ -1,0 +1,45 @@
+/* style.css */
+
+/* Apply Inter font globally */
+body {
+    font-family: 'Inter', sans-serif;
+    /* Note: Tailwind classes like bg-gray-100 still apply from HTML */
+}
+
+/* Styling for the welcome message area */
+#welcomeMessageContainer {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0; /* Light border */
+    border-radius: 0.375rem; /* Rounded corners */
+    background-color: #f8fafc; /* Slightly different background */
+    min-height: 40px; /* Ensure it has some height even when empty */
+    word-wrap: break-word; /* Prevent long strings from breaking layout */
+    /* Tailwind class 'text-gray-700' still applies from HTML */
+}
+
+/* Styling for the error message area */
+#errorMessageContainer {
+    margin-top: 1rem; /* Space above error */
+    margin-bottom: 1rem; /* Space below error */
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    min-height: 40px; /* Ensure visibility even when empty */
+    text-align: center;
+    font-weight: 500; /* Medium font weight */
+    display: none; /* Hidden by default */
+}
+
+/* Specific style for when there IS an error */
+#errorMessageContainer.error-active {
+    display: block; /* Make it visible */
+    background-color: #fee2e2; /* Light red background */
+    color: #b91c1c; /* Dark red text */
+    border: 1px solid #fecaca; /* Red border */
+}
+
+/*
+   Other styling (layout, inputs, button) is still primarily handled by
+   Tailwind CSS classes applied directly in the index.html file.
+   You can add more custom CSS rules here if needed.
+*/
