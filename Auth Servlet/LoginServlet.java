@@ -17,6 +17,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Base64; // Import Base64
 import org.mindrot.jbcrypt.BCrypt; // Import BCrypt
+import java.util.UUID; // Import UUID
 
 /**
  * Servlet implementation class LoginServlet
@@ -34,7 +35,7 @@ public class LoginServlet extends HttpServlet {
     private String dbPassword;
 
     // A fixed string used in session token generation
-    private static final String SESSION_TOKEN_KEY = "AppSessionValue"; // Renamed from SESSION_ID_SECRET
+    private static final String SESSION_TOKEN_KEY = "a3f9c8d4e7b1a2f3";
 
     /**
      * Initializes the servlet and loads database configuration from environment variables.
@@ -67,6 +68,13 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
+        String csrfToken = request.getParameter("csrfToken");
+        HttpSession session = request.getSession(false);
+        if (session == null || !csrfToken.equals(session.getAttribute("csrfToken"))) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid CSRF token");
+            return;
+        }
 
         String username = request.getParameter("username");
         String password = request.getParameter("password");
@@ -140,10 +148,14 @@ public class LoginServlet extends HttpServlet {
 
             // --- Standard Servlet Session Usage (Optional) ---
             // Use the standard session for storing server-side user details.
-            HttpSession session = request.getSession(true); // Get or create standard session
+            session = request.getSession(true); // Get or create standard session
             session.setAttribute("username", username);
             session.setAttribute("userId", userId);
             System.out.println("Standard session created/retrieved for user: " + username + ", ID: " + session.getId());
+
+            // Generate and store CSRF token in session
+            String csrfTokenNew = UUID.randomUUID().toString();
+            session.setAttribute("csrfToken", csrfTokenNew);
 
             // Redirect to the authenticated page
             response.sendRedirect(request.getContextPath() + "/authenticated");
