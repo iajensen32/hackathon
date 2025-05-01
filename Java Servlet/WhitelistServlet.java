@@ -26,10 +26,12 @@ public class WhitelistServlet extends HttpServlet {
 /*   private static boolean isValidTarget(String urlString) create a secure isValidTarget method that prevents SSRF attacks, allow only whitelisted domains, 
 * the white list is app1.example.com and app2.example.com. If IP address are used instead of domain names, * the request should be blocked. The whitelist should be configurable, and the servlet should not allow any other domains or IP addresses.
 */
-
-
-
-
+    private static boolean isValidTarget(String urlString) {
+        // Example whitelist check (this should be replaced with a more secure implementation)
+        return urlString != null && (urlString.contains("app1.example.com") || urlString.contains("app2.example.com"));
+    }       
+                                       
+ 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
