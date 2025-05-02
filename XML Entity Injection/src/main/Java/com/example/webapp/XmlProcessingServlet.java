@@ -1,4 +1,4 @@
-package com.example.webapp; // Updated package
+package com.example.webapp;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -24,11 +24,11 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Servlet to handle XML file uploads and process them.
+ * Includes basic validation attempt before parsing.
  */
-// Map to the new action path used in index.html
-@WebServlet("/process") // Updated mapping
+@WebServlet("/process")
 @MultipartConfig
-public class XmlProcessingServlet extends HttpServlet { // Renamed class
+public class XmlProcessingServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -58,6 +58,16 @@ public class XmlProcessingServlet extends HttpServlet { // Renamed class
                 xmlContent = new String(fileInputStream.readAllBytes(), StandardCharsets.UTF_8);
             }
 
+            // --- Perform Basic Validation ---
+            if (!performBasicValidation(xmlContent)) { // Renamed method call
+                out.println("<p style='color:red;'>Error: Basic XML validation failed. Please check the content format and size.</p>"); // Generic error message
+                out.println("</body></html>");
+                return;
+            }
+            out.println("<p>Basic validation passed.</p>");
+            // --- End Basic Validation ---
+
+
             // --- XML Parsing Section ---
             out.println("<h2>Parsed Content:</h2>");
             try {
@@ -70,12 +80,12 @@ public class XmlProcessingServlet extends HttpServlet { // Renamed class
 
                 // Parse the XML content from the string
                 InputSource is = new InputSource(new StringReader(xmlContent));
-                Document doc = db.parse(is);
+                Document doc = db.parse(is); // Parsing happens here
                 doc.getDocumentElement().normalize();
 
                 // Attempt to extract some data
                 // Example: Get content of the first element named 'item'
-                NodeList itemNodes = doc.getElementsByTagName("item"); // Changed example tag
+                NodeList itemNodes = doc.getElementsByTagName("item");
                 if (itemNodes.getLength() > 0) {
                     String itemContent = itemNodes.item(0).getTextContent();
                     out.println("<p>Content of first '&lt;item&gt;' element:</p>");
@@ -88,26 +98,50 @@ public class XmlProcessingServlet extends HttpServlet { // Renamed class
 
             } catch (ParserConfigurationException | SAXException e) {
                 out.println("<p style='color:red;'>Error parsing XML: " + escapeHtml(e.getMessage()) + "</p>");
-                // Log the full error server-side
-                System.err.println("XML Parsing Error: " + e.getMessage()); // Log to console/server logs
-                // e.printStackTrace(); // Optionally print stack trace to server logs
+                System.err.println("XML Parsing Error: " + e.getMessage());
             } catch (Exception e) {
                  out.println("<p style='color:red;'>An unexpected error occurred during XML processing: " + escapeHtml(e.getMessage()) + "</p>");
                  System.err.println("Unexpected XML Processing Error: " + e.getMessage());
-                 // e.printStackTrace();
             }
             // --- End XML Parsing Section ---
 
         } catch (Exception e) {
             out.println("<p style='color:red;'>An error occurred during file upload processing: " + escapeHtml(e.getMessage()) + "</p>");
-            // Log the full error server-side
             System.err.println("File Upload Processing Error: " + e.getMessage());
-            // e.printStackTrace();
         } finally {
             out.println("</body></html>");
             out.close();
         }
     }
+
+    /**
+     * Performs basic validation checks on the raw XML content string.
+     *
+     * @param xmlContent The raw XML content as a string.
+     * @return true if basic checks pass, false otherwise.
+     */
+    private boolean performBasicValidation(String xmlContent) { // Renamed method
+        System.out.println("[VALIDATOR] Performing basic validation...");
+
+        // Check 1: Length limit
+        final int MAX_LENGTH = 10000; // Example limit
+        if (xmlContent.length() > MAX_LENGTH) {
+            System.out.println("[VALIDATOR] Failed: Content length check."); // Generic log message
+            return false;
+        }
+
+        // Check 2: Look for script tags (basic check)
+        if (xmlContent.toLowerCase().contains("<script")) {
+             System.out.println("[VALIDATOR] Failed: Content structure check."); // Generic log message
+             return false;
+        }
+
+        // Other basic checks could go here.
+
+        System.out.println("[VALIDATOR] Basic validation passed.");
+        return true;
+    }
+
 
     /**
      * Basic HTML escaping utility.
