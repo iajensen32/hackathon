@@ -110,14 +110,12 @@ public class UpdateRateServlet extends HttpServlet {
 
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
-        // Get the session. Assume it exists due to prior authentication.
-        // If not, the CSRF check relying on session token will fail later.
-        HttpSession session = request.getSession(false);
+        HttpSession session = request.getSession(false); // Get existing session
 
         out.println("<!DOCTYPE html><html><head><title>Rate Update Status</title></head><body>");
         out.println("<h1>Rate Update Status</h1>");
 
-        // 1. Check if session exists (basic check, real auth is assumed done)
+        // 1. Check if session exists
         if (session == null) {
              System.out.println("[SERVLET-POST] No active session found. Cannot process request.");
              out.println("<p style='color:red;'>Error: No active session. Please log in.</p>");
@@ -125,77 +123,30 @@ public class UpdateRateServlet extends HttpServlet {
              return;
         }
         // Ensure token exists in session for the authenticated user
-        // Although doGet should have created it, check again in case session expired/restarted
         ensureCsrfToken(session);
         System.out.println("[SERVLET-POST] Active session detected.");
-
 
         // 2. Get parameters from the request
         String loanId = request.getParameter("loanId");
         String newRateStr = request.getParameter("newRate");
 
-        // Validate loanId
-        if (loanId == null || loanId.trim().isEmpty() || !loanId.matches("\\d+")) {
-            out.println("<p style='color:red;'>Error: Loan ID must be a non-empty numeric value.</p>");
+        // Basic validation of parameters
+        if (loanId == null || loanId.trim().isEmpty() || newRateStr == null || newRateStr.trim().isEmpty()) {
+            out.println("<p style='color:red;'>Error: Loan ID and New Rate are required.</p>");
             out.println("</body></html>");
             return;
         }
 
-        // Validate newRate
-        double newRate;
-        try {
-            newRate = Double.parseDouble(newRateStr);
-            if (newRate < 0 || newRate > 100) {
-                out.println("<p style='color:red;'>Error: New Rate must be between 0 and 100.</p>");
-                out.println("</body></html>");
-                return;
-            }
-        } catch (NumberFormatException e) {
-            out.println("<p style='color:red;'>Error: New Rate must be a valid numeric value.</p>");
-            out.println("</body></html>");
-            return;
-        }
-
-        // Proceed with processing if validation passes
-        System.out.println("[SERVLET-POST] Validation passed for Loan ID: " + loanId + ", New Rate: " + newRate);
-
-        // 3. Check CSRF Token Parameter
-        String requestToken = request.getParameter(CSRF_TOKEN_REQUEST_PARAM);
-        String sessionToken = (String) session.getAttribute(CSRF_TOKEN_SESSION_ATTR);
-
-        boolean proceed = false; // Flag to determine if the action should proceed
-
-        if (requestToken != null) {
-            // --- Path taken if csrfToken parameter IS PRESENT ---
-            System.out.println("[SERVLET-POST] Received request token parameter. Performing check...");
-            System.out.println("[SERVLET-POST] Request Token: " + requestToken);
-            System.out.println("[SERVLET-POST] Session Token: " + sessionToken);
-
-            // Validate the token if it was provided
-            // sessionToken check also implicitly verifies session exists
-            if (sessionToken != null && sessionToken.equals(requestToken)) {
-                System.out.println("[SERVLET-POST] CSRF token check PASSED.");
-                proceed = true; // Allow action if token matches
-                // Regenerate token after successful validation and state change (good practice)
-                generateCsrfToken(session);
-                System.out.println("[SERVLET-POST] Regenerated session CSRF token.");
-            } else {
-                System.out.println("[SERVLET-POST] CSRF token check FAILED (Mismatch or session token missing).");
-                out.println("<p style='color:red;'>Error: Security token validation failed. Please try submitting the form again.</p>");
-                // Do NOT proceed
-            }
-        } else {
-           
-            System.out.println("[SERVLET-POST] Request token parameter ('" + CSRF_TOKEN_REQUEST_PARAM + "') is MISSING.");
-            
-            proceed = true;
-        }
+        // 3. Validate CSRF Token using the helper method
+        boolean proceed = validateCsrfToken(request, session);
 
         // 4. Perform the action ONLY if checks passed or were bypassed
         if (proceed) {
             try {
+                // Attempt to parse the rate
+                double newRate = Double.parseDouble(newRateStr.trim());
+
                 // Simulate updating the loan rate in a backend system
-                // In a real app, get username from request.getUserPrincipal() or session if set by auth mechanism
                 String principalName = (request.getUserPrincipal() != null) ? request.getUserPrincipal().getName() : "[Unknown Authenticated User]";
                 System.out.println("[SERVLET-POST] >>> ACTION: Updating loan '" + escapeHtml(loanId) + "' requested by '" + principalName + "' to new rate: " + newRate + "% <<<");
 
@@ -204,10 +155,15 @@ public class UpdateRateServlet extends HttpServlet {
                             + escapeHtml(loanId) + " to " + newRate + "%.</p>");
                 out.println("<p>(Action performed by authenticated user: " + escapeHtml(principalName) + ")</p>");
 
+            } catch (NumberFormatException e) {
+                out.println("<p style='color:red;'>Error: Invalid format for New Rate. Please enter a number (e.g., 4.5).</p>");
             } catch (Exception e) {
                 out.println("<p style='color:red;'>An unexpected error occurred while updating the rate: " + escapeHtml(e.getMessage()) + "</p>");
                 System.err.println("[SERVLET-POST] Error during simulated rate update: " + e.getMessage());
             }
+        } else {
+            // Token validation failed (and token was present)
+             out.println("<p style='color:red;'>Error: Security token validation failed. Please try submitting the form again.</p>");
         }
 
         // Link back to the form (which will be regenerated by doGet)
@@ -215,6 +171,42 @@ public class UpdateRateServlet extends HttpServlet {
         out.println("</body></html>");
         out.close();
     }
+
+    /**
+     * Validates the CSRF token present in the request against the one in the session.
+     *
+     * @param request The HttpServletRequest.
+     * @param session The HttpSession (assumed non-null).
+     * @return true if the request should proceed (token valid), false otherwise (token invalid).
+     */
+    private boolean validateCsrfToken(HttpServletRequest request, HttpSession session) {
+        String requestToken = request.getParameter(CSRF_TOKEN_REQUEST_PARAM);
+        String sessionToken = (String) session.getAttribute(CSRF_TOKEN_SESSION_ATTR);
+
+        if (requestToken != null) {
+            // --- Path taken if csrfToken parameter IS PRESENT ---
+            System.out.println("[CSRF-VALIDATOR] Received request token parameter. Performing check...");
+            System.out.println("[CSRF-VALIDATOR] Request Token: " + requestToken);
+            System.out.println("[CSRF-VALIDATOR] Session Token: " + sessionToken);
+
+            // Validate the token if it was provided
+            if (sessionToken != null && sessionToken.equals(requestToken)) {
+                System.out.println("[CSRF-VALIDATOR] CSRF token check PASSED.");
+                // Regenerate token after successful validation and state change (good practice)
+                generateCsrfToken(session);
+                System.out.println("[CSRF-VALIDATOR] Regenerated session CSRF token.");
+                return true; // Token is valid
+            } else {
+                System.out.println("[CSRF-VALIDATOR] CSRF token check FAILED (Mismatch or session token missing).");
+                return false; // Token is invalid
+            }
+        } else {
+        
+            System.out.println("[CSRF-VALIDATOR] Request token parameter ('" + CSRF_TOKEN_REQUEST_PARAM + "') is MISSING.");
+            return true; 
+        }
+    }
+
 
     /**
      * Ensures a CSRF token exists in the session, generating one if needed.
