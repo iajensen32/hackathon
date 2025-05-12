@@ -1,0 +1,4 @@
+com/example/springdocs/SpringDocApplication.class
+com/example/springdocs/model/DocumentRecord.class
+com/example/springdocs/service/DocumentService.class
+com/example/springdocs/controller/DocumentController.class

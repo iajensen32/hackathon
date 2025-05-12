@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Document Viewer</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .error-message { color: red; font-weight: bold; }
+        .not-found-message { color: orange; font-weight: bold; }
+        .info-message { font-style: italic; color: #555; font-size: 0.9em; }
+        .document-content {
+            border: 1px solid #eee;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+            white-space: pre-wrap; /* Handles line breaks and spacing */
+            word-wrap: break-word;
+            font-family: monospace;
+        }
+        .test-links ul { list-style-type: none; padding: 0; }
+        .test-links li { margin-bottom: 8px; }
+        .test-links a { text-decoration: none; color: #3498db; }
+        .test-links a:hover { text-decoration: underline; }
+        hr { border: 0; height: 1px; background-color: #ddd; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Document Viewer</h1>
+
+        <p th:if="${currentUserId}" class="info-message">
+            Current User ID: <span th:text="${currentUserId}">user</span>
+        </p>
+        <p th:if="${requestedDocId}" class="info-message">
+            Requested Document ID: <span th:text="${requestedDocId}">docId</span>
+        </p>
+        <hr/>
+
+        <div th:if="${errorMessage}" class="error-message">
+            <p th:text="${errorMessage}">Error message will appear here.</p>
+        </div>
+
+        <div th:if="${document}">
+            <h2 th:text="${'Document: ' + document.title + ' (ID: ' + document.documentId + ')'}">Document Title (ID)</h2>
+            <p><b>Owner:</b> <span th:text="${document.ownerUserId}">Owner ID</span></p>
+            <h3>Content:</h3>
+            <pre class="document-content" th:text="${document.content}">Document content will appear here.</pre>
+        </div>
+
+        <div th:if="${notFoundMessage}" class="not-found-message">
+            <p th:text="${notFoundMessage}">Document not found message will appear here.</p>
+        </div>
+
+        <hr/>
+        <div class="test-links">
+            <p>Test Links (assuming logged in as user1 or user2):</p>
+            <ul>
+                <li><a th:href="@{/viewDocument(docId='DOC001')}">View DOC001 (Owned by user1)</a></li>
+                <li><a th:href="@{/viewDocument(docId='DOC002')}">View DOC002 (Owned by user1)</a></li>
+                <li><a th:href="@{/viewDocument(docId='DOC004')}">View DOC004 (Owned by user2)</a></li>
+                <li><a th:href="@{/viewDocument(docId='DOC005')}">View DOC005 (Owned by user2)</a></li>
+                <li><a th:href="@{/viewDocument(docId='DOC999')}">View DOC999 (Not Found)</a></li>
+            </ul>
+             <p>To simulate login:</p>
+            <ul>
+                <li><a th:href="@{/perform-login(userId='user1')}">Login as user1</a></li>
+                <li><a th:href="@{/perform-login(userId='user2')}">Login as user2</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
