@@ -30,19 +30,16 @@ public class DocumentServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
 
         // --- Assume Authentication Handled ---
-        // Get session, assume authentication happened previously.
         HttpSession session = request.getSession(false);
         String currentUserId = null;
 
         if (session != null && session.getAttribute("userId") != null) {
-             currentUserId = (String) session.getAttribute("userId");
+            currentUserId = (String) session.getAttribute("userId");
         } else {
-             // Redirect to the login page if no session/userId exists
-             response.sendRedirect("/login");
-             return; // Stop further processing
+            response.sendRedirect("/login");
+            return;
         }
         // --- End Assumption ---
-
 
         // Get the document ID requested by the user from the URL parameter
         String requestedDocId = request.getParameter("docId");
@@ -56,23 +53,11 @@ public class DocumentServlet extends HttpServlet {
         if (requestedDocId == null || requestedDocId.trim().isEmpty()) {
             out.println("<p style='color:red;'>Error: Please provide a document ID (e.g., /viewDocument?docId=DOC001).</p>");
         } else {
-            // Retrieve the document record using the service
-            DocumentRecord document = documentService.getDocumentById(requestedDocId.trim());
-            if (document != null) {
-                // Display the document data 
-                out.println("<h2>Document: " + escapeHtml(document.getTitle()) + " (ID: " + escapeHtml(document.getDocumentId()) + ")</h2>");
-                out.println("<p><b>Owner:</b> " + escapeHtml(document.getOwnerUserId()) + "</p>"); 
-                out.println("<h3>Content:</h3>");
-                out.println("<pre style='border: 1px solid #eee; padding: 10px; background-color: #f8f8f8;'>");
-                out.println(escapeHtml(document.getContent())); // Displaying potentially sensitive content
-                out.println("</pre>");
-            } else {
-                out.println("<p style='color:orange;'>Document not found for ID: " + escapeHtml(requestedDocId.trim()) + "</p>");
-            }
+            // Call the new method to retrieve and display the document
+            displayDocument(out, requestedDocId.trim(), currentUserId);
         }
 
         out.println("<hr>");
-        // Provide links to test different scenarios
         out.println("<p>Test Links (assuming logged in as user1):</p>");
         out.println("<ul>");
         out.println("<li><a href='?docId=DOC001'>View DOC001 (Owned by user1)</a></li>");
@@ -84,6 +69,25 @@ public class DocumentServlet extends HttpServlet {
 
         out.println("</body></html>");
         out.close();
+    }
+
+    /**
+     * Retrieves and displays the document record using the service.
+     */
+    private void displayDocument(PrintWriter out, String requestedDocId, String currentUserId) {
+        DocumentRecord document = documentService.getDocumentById(requestedDocId);
+        if (document != null) {
+                // Display the document data
+                out.println("<h2>Document: " + escapeHtml(document.getTitle()) + " (ID: " + escapeHtml(document.getDocumentId()) + ")</h2>");
+                out.println("<p><b>Owner:</b> " + escapeHtml(document.getOwnerUserId()) + "</p>");
+                out.println("<h3>Content:</h3>");
+                out.println("<pre style='border: 1px solid #eee; padding: 10px; background-color: #f8f8f8;'>");
+                out.println(escapeHtml(document.getContent()));
+                out.println("</pre>");
+            }
+        } else {
+            out.println("<p style='color:orange;'>Document not found for ID: " + escapeHtml(requestedDocId) + "</p>");
+        }
     }
 
     /** Basic HTML escaping utility. */
